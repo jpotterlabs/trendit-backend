@@ -1,8 +1,7 @@
-"""
-Vercel serverless function entry point for FastAPI backend.
-"""
-from main import app
+import sys
+import os
 
-# Vercel expects a function called 'handler' or the app instance
-# This makes the FastAPI app available to Vercel Functions
-handler = app
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from main import app

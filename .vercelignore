@@ -1,0 +1,18 @@
+# Development files
+.env*
+.git/
+.claude/
+.vscode/
+.idea/
+
+# Documentation and test files
+*.md
+*.txt
+test_*
+*test.py
+
+# Cache and temp
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

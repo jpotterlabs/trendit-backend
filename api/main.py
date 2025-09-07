@@ -1,4 +1,3 @@
-# Vercel cache bust
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -36,19 +35,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Trendit API server...")
     
-    try:
-        # Log the database URL
-        from models.database import DATABASE_URL
-        logger.info(f"Connecting to database: {DATABASE_URL}")
-        
-        # Create database tables
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created/verified")
-        
-    except Exception as e:
-        logger.error(f"Error during startup: {e}")
-        # You might want to raise the exception to prevent the app from starting
-        # raise e
+    # Create database tables
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created/verified")
     
     yield
     
