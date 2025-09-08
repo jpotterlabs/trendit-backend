@@ -484,3 +484,97 @@ async def delete_api_key(
     db.commit()
     
     return {"message": "API key deleted successfully"}
+
+# Admin/Testing endpoints
+@router.post("/create-test-user")
+async def create_test_user(
+    admin_key: str,
+    db: Session = Depends(get_db)
+) -> dict:
+    """Create a test user with predefined credentials (admin only)"""
+    # Check admin key
+    expected_admin_key = os.getenv("ADMIN_SECRET_KEY")
+    if not expected_admin_key or admin_key != expected_admin_key:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid admin key"
+        )
+    
+    # Define test user credentials
+    test_email = "test@trendit.dev"
+    test_password = "TestPassword123"  # nosec B105 - Intentional test password for admin endpoint
+    test_username = "trendit_tester"
+    
+    # Check if test user already exists
+    existing_user = db.query(User).filter(User.email == test_email).first()
+    if existing_user:
+        # Update existing user to ensure it's active with known password
+        existing_user.password_hash = hash_password(test_password)
+        existing_user.is_active = True
+        existing_user.subscription_status = SubscriptionStatus.ACTIVE  # Give active subscription for testing
+        db.commit()
+        db.refresh(existing_user)
+        
+        # Create a new API key for the user (atomic operation)
+        raw_key, hashed_key = generate_api_key()
+        
+        # Delete old API keys and create new one atomically
+        db.query(APIKey).filter(APIKey.user_id == existing_user.id).delete(synchronize_session=False)
+        
+        db_api_key = APIKey(
+            user_id=existing_user.id,
+            key_hash=hashed_key,
+            name="Test API Key",
+            is_active=True
+        )
+        db.add(db_api_key)
+        db.commit()
+        
+        return {
+            "message": "Test user updated successfully",
+            "user": {
+                "id": existing_user.id,
+                "email": test_email,
+                "username": test_username,
+                "password": test_password
+            },
+            "api_key": raw_key
+        }
+    
+    # Create new test user
+    hashed_password = hash_password(test_password)
+    db_user = User(
+        email=test_email,
+        username=test_username,
+        password_hash=hashed_password,
+        is_active=True,
+        subscription_status=SubscriptionStatus.ACTIVE  # Give active subscription for testing
+    )
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    # Create API key for the test user
+    raw_key, hashed_key = generate_api_key()
+    
+    db_api_key = APIKey(
+        user_id=db_user.id,
+        key_hash=hashed_key,
+        name="Test API Key",
+        is_active=True
+    )
+    
+    db.add(db_api_key)
+    db.commit()
+    
+    return {
+        "message": "Test user created successfully",
+        "user": {
+            "id": db_user.id,
+            "email": test_email,
+            "username": test_username,
+            "password": test_password
+        },
+        "api_key": raw_key
+    }
