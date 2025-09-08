@@ -69,6 +69,9 @@ class APIKeyListResponse(BaseModel):
     expires_at: Optional[datetime]
     last_used_at: Optional[datetime]
 
+class AdminTestUserRequest(BaseModel):
+    admin_key: str
+
 # Utility functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -488,13 +491,13 @@ async def delete_api_key(
 # Admin/Testing endpoints
 @router.post("/create-test-user")
 async def create_test_user(
-    admin_key: str,
+    request: AdminTestUserRequest,
     db: Session = Depends(get_db)
 ) -> dict:
     """Create a test user with predefined credentials (admin only)"""
     # Check admin key
     expected_admin_key = os.getenv("ADMIN_SECRET_KEY")
-    if not expected_admin_key or admin_key != expected_admin_key:
+    if not expected_admin_key or request.admin_key != expected_admin_key:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid admin key"
