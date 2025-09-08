@@ -490,7 +490,7 @@ async def delete_api_key(
 async def create_test_user(
     admin_key: str,
     db: Session = Depends(get_db)
-):
+) -> dict:
     """Create a test user with predefined credentials (admin only)"""
     # Check admin key
     expected_admin_key = os.getenv("ADMIN_SECRET_KEY")
@@ -502,7 +502,7 @@ async def create_test_user(
     
     # Define test user credentials
     test_email = "test@trendit.dev"
-    test_password = "TestPassword123"
+    test_password = "TestPassword123"  # nosec B105 - Intentional test password for admin endpoint
     test_username = "trendit_tester"
     
     # Check if test user already exists
@@ -515,11 +515,11 @@ async def create_test_user(
         db.commit()
         db.refresh(existing_user)
         
-        # Create a new API key for the user
+        # Create a new API key for the user (atomic operation)
         raw_key, hashed_key = generate_api_key()
         
-        # Delete old API keys first
-        db.query(APIKey).filter(APIKey.user_id == existing_user.id).delete()
+        # Delete old API keys and create new one atomically
+        db.query(APIKey).filter(APIKey.user_id == existing_user.id).delete(synchronize_session=False)
         
         db_api_key = APIKey(
             user_id=existing_user.id,
