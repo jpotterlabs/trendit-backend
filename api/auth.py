@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
-from datetime import datetime, timedelta, timezone, timezone
+from datetime import datetime, timedelta, timezone
 import secrets
 import hashlib
 import jwt
@@ -110,7 +110,9 @@ async def get_current_user_unified(
         claims = auth0_service.verify_jwt_token(credentials.credentials)
         user = auth0_service.get_or_create_user(claims, db)
         return user
-    except HTTPException:
+    except HTTPException as err:
+        if err.status_code not in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN):
+            raise
         # If Auth0 fails, try regular JWT token
         try:
             payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
@@ -120,28 +122,35 @@ async def get_current_user_unified(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate credentials",
                     headers={"WWW-Authenticate": "Bearer"},
-                )
-            
-            user = db.query(User).filter(User.id == int(user_id)).first()
+                ) from None
+            try:
+                uid = int(user_id)
+            except (TypeError, ValueError):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from None
+            user = db.query(User).filter(User.id == uid).first()
             if user is None:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="User not found",
                     headers={"WWW-Authenticate": "Bearer"},
-                )
+                ) from None
             if not user.is_active:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Account is inactive",
                     headers={"WWW-Authenticate": "Bearer"},
-                )
+                ) from None
             return user
         except jwt.InvalidTokenError:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
                 headers={"WWW-Authenticate": "Bearer"},
-            )
+            ) from None
 
 # Dependency functions
 async def get_current_user(
@@ -569,10 +578,9 @@ async def delete_api_key(
             detail="API key not found"
         )
     
-    db.delete(api_key)
+    api_key.is_active = False
     db.commit()
-    
-    return {"message": "API key deleted successfully"}
+    return {"message": "API key deactivated successfully"}
 
 # Admin/Testing endpoints
 @router.post("/create-test-user")

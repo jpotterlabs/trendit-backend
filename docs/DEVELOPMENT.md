@@ -106,13 +106,14 @@ DATABASE_URL=postgresql://trendit_user:dev_password@localhost:5432/trendit_dev
 
 ```bash
 # Use Neon database for development (not recommended for team work)
-DATABASE_URL=postgresql://neondb_owner:npg_daSvTEL8boA6@ep-silent-mud-af6oce7w-pooler.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require
+# Replace with your own placeholder; never commit secrets
+DATABASE_URL=postgresql://<USER>:<PASSWORD>@<HOST>/<DB>?sslmode=require
 ```
 
 ## 🔑 API Credentials Setup
 
 ### Reddit API
-1. Go to https://www.reddit.com/prefs/apps
+1. Go to [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps)
 2. Click "Create App" or "Create Another App"
 3. Choose "web app" type
 4. Set redirect URI to `http://localhost:8000/auth/reddit/callback`
@@ -143,7 +144,8 @@ REDDIT_USER_AGENT=TrenditDev/1.0 by /u/yourusername
 AUTH0_DOMAIN=your-dev-domain.auth0.com
 AUTH0_CLIENT_ID=your_auth0_client_id
 AUTH0_CLIENT_SECRET=your_auth0_client_secret
-AUTH0_AUDIENCE=http://localhost:8000
+# Use your Auth0 API Identifier (https)
+AUTH0_AUDIENCE=https://api.potterlabs.xyz
 
 # JWT Configuration
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=1440

@@ -121,15 +121,13 @@ async def auth0_callback(
         # Check if user has an API key, create one if not
         existing_api_key = db.query(APIKey).filter(
             APIKey.user_id == user.id,
-            APIKey.is_active == True,
+            APIKey.is_active.is_(True),
             APIKey.name.in_(["Auth0 Login Key", "Auth0 Login Key (Renewed)"])
         ).first()
         
         if existing_api_key:
-            # For existing users, return full API key
-            # Need to generate a new one since we can't retrieve the original raw key
-            # Delete old API key and create new one
-            db.delete(existing_api_key)
+            # Rotate: deactivate old key and create a new one (keeps audit fields)
+            existing_api_key.is_active = False
             raw_key, key_hash = generate_api_key()
             
             new_api_key = APIKey(
