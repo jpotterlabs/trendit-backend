@@ -65,13 +65,31 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS for production and development
+allowed_origins = [
+    "https://reddit.potterlabs.xyz",  # Production frontend
+    "https://reddit.potterlabs.xyz/",  # With trailing slash
+    "http://localhost:3000",  # Development frontend
+    "http://localhost:3001",  # Alternative dev port
+    "https://localhost:3000",  # HTTPS dev
+]
+
+# Add environment-specific origins
+if os.getenv("ADDITIONAL_CORS_ORIGINS"):
+    additional_origins = os.getenv("ADDITIONAL_CORS_ORIGINS").split(",")
+    allowed_origins.extend([origin.strip() for origin in additional_origins])
+
+# In development, allow all origins for easier testing
+if os.getenv("DEBUG", "false").lower() == "true":
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include routers
