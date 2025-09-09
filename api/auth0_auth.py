@@ -12,7 +12,7 @@ from typing import Optional, Dict, Any
 from models.database import get_db
 from models.models import User, APIKey, SubscriptionStatus
 from services.auth0_service import auth0_service
-from api.auth import create_access_token
+from api.auth import create_access_token, generate_api_key
 import logging
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ async def auth0_callback(
         # Verify the access token and get user info from Auth0
         user_info = auth0_service.get_user_info(callback_data.access_token)
         
-        logger.info(f"Auth0 callback for user: {user_info.get('email')}")
+        logger.info(f"Auth0 callback for user_id: {user_info.get('sub')}")
         
         # Create user claims format expected by get_or_create_user
         auth0_claims = {
@@ -121,19 +121,28 @@ async def auth0_callback(
         # Check if user has an API key, create one if not
         existing_api_key = db.query(APIKey).filter(
             APIKey.user_id == user.id,
-            APIKey.is_active == True
+            APIKey.is_active.is_(True),
+            APIKey.name.in_(["Auth0 Login Key", "Auth0 Login Key (Renewed)"])
         ).first()
         
         if existing_api_key:
-            api_key = existing_api_key.key_hash[:8] + "..." # Show partial key
+            # Rotate: deactivate old key and create a new one (keeps audit fields)
+            existing_api_key.is_active = False
+            raw_key, key_hash = generate_api_key()
+            
+            new_api_key = APIKey(
+                user_id=user.id,
+                name="Auth0 Login Key (Renewed)",
+                key_hash=key_hash,
+                is_active=True
+            )
+            db.add(new_api_key)
+            db.commit()
+            
+            api_key = raw_key
         else:
             # Create new API key using existing system
-            import hashlib
-            import secrets
-            
-            # Generate API key
-            raw_key = secrets.token_urlsafe(32)
-            key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+            raw_key, key_hash = generate_api_key()
             
             new_api_key = APIKey(
                 user_id=user.id,
@@ -144,7 +153,7 @@ async def auth0_callback(
             db.add(new_api_key)
             db.commit()
             
-            api_key = raw_key[:8] + "..."
+            api_key = raw_key
         
         # Prepare user info for response
         user_data = {
@@ -156,7 +165,7 @@ async def auth0_callback(
             "created_at": user.created_at.isoformat()
         }
         
-        logger.info(f"Auth0 login successful for {user.email} via {user.auth0_provider}")
+        logger.info(f"Auth0 login successful for user_id={user.id} via {user.auth0_provider}")
         
         return Auth0LoginResponse(
             message="Login successful",
