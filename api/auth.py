@@ -13,6 +13,7 @@ from sqlalchemy import func, and_
 
 from models.database import get_db
 from models.models import User, APIKey, SubscriptionStatus, PaddleSubscription, SubscriptionTier, UsageRecord
+from services.auth0_service import auth0_service
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -94,6 +95,53 @@ def generate_api_key() -> tuple[str, str]:
     raw_key = f"tk_{secrets.token_urlsafe(32)}"  # tk_ prefix for Trendit Key
     hashed_key = hashlib.sha256(raw_key.encode()).hexdigest()
     return raw_key, hashed_key
+
+# Unified authentication dependency that handles both Auth0 and regular JWT tokens
+async def get_current_user_unified(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    Unified dependency to get current user from either Auth0 JWT token or regular JWT token
+    Tries Auth0 JWT first, then falls back to regular JWT
+    """
+    try:
+        # First try Auth0 JWT token verification
+        claims = auth0_service.verify_jwt_token(credentials.credentials)
+        user = auth0_service.get_or_create_user(claims, db)
+        return user
+    except HTTPException:
+        # If Auth0 fails, try regular JWT token
+        try:
+            payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id: str = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Could not validate credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            
+            user = db.query(User).filter(User.id == int(user_id)).first()
+            if user is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Account is inactive",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return user
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
 # Dependency functions
 async def get_current_user(
@@ -415,6 +463,44 @@ async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/login")
+async def login_info():
+    """Get login information and available authentication methods"""
+    return {
+        "message": "Authentication required",
+        "methods": {
+            "email_password": {
+                "endpoint": "POST /auth/login",
+                "description": "Login with email and password"
+            },
+            "auth0_oauth": {
+                "callback_endpoint": "POST /auth0/callback", 
+                "description": "OAuth login via Auth0 (Google, GitHub)"
+            }
+        },
+        "profile_endpoint": "GET /auth/profile",
+        "api_key_endpoints": {
+            "create": "POST /auth/api-keys",
+            "list": "GET /auth/api-keys",
+            "delete": "DELETE /auth/api-keys/{id}"
+        }
+    }
+
+# User profile endpoint (works with both Auth0 and regular JWT tokens)
+@router.get("/profile", response_model=UserResponse)
+async def get_user_profile(
+    current_user: User = Depends(get_current_user_unified)
+):
+    """Get current user profile (supports both Auth0 and regular JWT tokens)"""
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        is_active=current_user.is_active,
+        subscription_status=current_user.subscription_status.value,
+        created_at=current_user.created_at
+    )
 
 # API Key management endpoints
 @router.post("/api-keys", response_model=APIKeyResponse)

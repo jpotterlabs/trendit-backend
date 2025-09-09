@@ -125,15 +125,29 @@ async def auth0_callback(
         ).first()
         
         if existing_api_key:
-            api_key = existing_api_key.key_hash[:8] + "..." # Show partial key
+            # For existing users, return full API key
+            # Need to generate a new one since we can't retrieve the original raw key
+            from api.auth import generate_api_key
+            
+            # Delete old API key and create new one
+            db.delete(existing_api_key)
+            raw_key, key_hash = generate_api_key()
+            
+            new_api_key = APIKey(
+                user_id=user.id,
+                name="Auth0 Login Key (Renewed)",
+                key_hash=key_hash,
+                is_active=True
+            )
+            db.add(new_api_key)
+            db.commit()
+            
+            api_key = raw_key
         else:
             # Create new API key using existing system
-            import hashlib
-            import secrets
+            from api.auth import generate_api_key
             
-            # Generate API key
-            raw_key = secrets.token_urlsafe(32)
-            key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+            raw_key, key_hash = generate_api_key()
             
             new_api_key = APIKey(
                 user_id=user.id,
@@ -144,7 +158,7 @@ async def auth0_callback(
             db.add(new_api_key)
             db.commit()
             
-            api_key = raw_key[:8] + "..."
+            api_key = raw_key
         
         # Prepare user info for response
         user_data = {
