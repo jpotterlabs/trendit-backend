@@ -3,7 +3,7 @@
 Complete reference for the Trendit Backend API endpoints.
 
 ## Base URL
-```
+```text
 Production: https://api.potterlabs.xyz
 Local: http://localhost:8000
 ```
@@ -40,7 +40,7 @@ POST /auth/create-test-user
 ```
 
 **Headers:**
-```
+```http
 Content-Type: application/json
 ```
 
@@ -210,7 +210,7 @@ GET /api/scenarios/1/subreddit-keyword-search
 - `sort_order` (optional): Sort direction (`asc`, `desc`)
 
 **Example:**
-```
+```http
 GET /api/scenarios/1/subreddit-keyword-search?subreddit=python&keywords=tutorial,guide&date_from=2024-01-01&date_to=2024-12-31&limit=50
 ```
 

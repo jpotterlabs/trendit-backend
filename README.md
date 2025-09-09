@@ -49,7 +49,7 @@ python -c "import asyncio; from test_api import test_reddit_connection; asyncio.
 
 ## 🔑 Environment Configuration
 
-Create `.env` file with these variables:
+Create a `.env` file with these variables (never commit real values). Ensure numeric vars (e.g., JWT_ACCESS_TOKEN_EXPIRE_MINUTES) are set, or your app may fail to start:
 
 ```bash
 # Database
@@ -196,8 +196,8 @@ python -c "from models.database import reset_database; reset_database()"
 ## 🚀 Deployment
 
 ### Production URLs
-- **API**: https://api.potterlabs.xyz
-- **Frontend**: https://reddit.potterlabs.xyz
+- **API**: <https://api.potterlabs.xyz>
+- **Frontend**: <https://reddit.potterlabs.xyz>
 
 ### Environment Variables
 Set all environment variables in your hosting platform (Render, etc.)
@@ -297,4 +297,4 @@ uvicorn main:app --reload --log-level debug
 
 ## 📄 License
 
-Copyright (c) 2024 Potter Labs. All rights reserved.
+Copyright (c) 2025 Potter Labs. All rights reserved.

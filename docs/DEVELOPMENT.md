@@ -52,7 +52,7 @@ python -c "from models.database import engine; print('Database connected!')"
 uvicorn main:app --reload --port 8000
 ```
 
-Visit: http://localhost:8000/docs for API documentation
+Visit: [http://localhost:8000/docs](http://localhost:8000/docs) for API documentation
 
 ## 🗄️ Database Setup Options
 
@@ -122,7 +122,7 @@ DATABASE_URL=postgresql://neondb_owner:npg_daSvTEL8boA6@ep-silent-mud-af6oce7w-p
 1. Go to Auth0 Dashboard → Applications
 2. Create new "Single Page Application"
 3. Configure URLs:
-   ```
+   ```text
    Allowed Callback URLs: http://localhost:3000/auth/callback
    Allowed Web Origins: http://localhost:3000
    Allowed Logout URLs: http://localhost:3000
@@ -202,13 +202,13 @@ curl -X POST "http://localhost:8000/auth/create-test-user" \
 curl http://localhost:8000/health
 
 # Test authentication
-curl -H "Authorization: Bearer tk_your_api_key" \
+curl -H "Authorization: Bearer <API_KEY>" \
   http://localhost:8000/auth/profile
 ```
 
 ## 🏗️ Project Structure
 
-```
+```text
 trendit-backend/
 ├── main.py                 # FastAPI application entry point
 ├── models/                 # Database models

@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, timezone
 import secrets
 import hashlib
 import jwt
@@ -265,7 +265,7 @@ def _calculate_billing_period(user: User, db: Session) -> tuple[datetime, dateti
         return paddle_service.calculate_billing_period(paddle_subscription)
     else:
         # Use calendar month for free users
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if now.month == 12:
             next_month = month_start.replace(year=now.year + 1, month=1)
@@ -507,7 +507,7 @@ async def get_user_profile(
 async def create_api_key(
     key_request: APIKeyRequest, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # We'll define this dependency
+    current_user: User = Depends(get_current_user_unified)
 ):
     """Create a new API key for the authenticated user"""
     raw_key, hashed_key = generate_api_key()
@@ -534,7 +534,7 @@ async def create_api_key(
 @router.get("/api-keys", response_model=list[APIKeyListResponse])
 async def list_api_keys(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_unified)
 ):
     """List all API keys for the authenticated user (without revealing the keys)"""
     api_keys = db.query(APIKey).filter(APIKey.user_id == current_user.id).all()
@@ -555,7 +555,7 @@ async def list_api_keys(
 async def delete_api_key(
     key_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_unified)
 ):
     """Delete an API key"""
     api_key = db.query(APIKey).filter(
