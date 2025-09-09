@@ -69,10 +69,16 @@ app = FastAPI(
 allowed_origins = [
     "https://reddit.potterlabs.xyz",  # Production frontend
     "https://reddit.potterlabs.xyz/",  # With trailing slash
+]
+
+# Always allow localhost for development (safe for production)
+localhost_origins = [
     "http://localhost:3000",  # Development frontend
     "http://localhost:3001",  # Alternative dev port
     "https://localhost:3000",  # HTTPS dev
+    "http://127.0.0.1:3000",  # Alternative localhost
 ]
+allowed_origins.extend(localhost_origins)
 
 # Add environment-specific origins
 if os.getenv("ADDITIONAL_CORS_ORIGINS"):
