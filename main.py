@@ -71,14 +71,21 @@ allowed_origins = [
     "https://reddit.potterlabs.xyz/",  # With trailing slash
 ]
 
-# Always allow localhost for development (safe for production)
+# Read localhost CORS environment flag
+allow_localhost_cors = os.getenv("ALLOW_LOCALHOST_CORS", "false").lower() in ("true", "1", "yes", "on")
+
+# Define localhost origins for development
 localhost_origins = [
     "http://localhost:3000",  # Development frontend
     "http://localhost:3001",  # Alternative dev port
     "https://localhost:3000",  # HTTPS dev
     "http://127.0.0.1:3000",  # Alternative localhost
+    "https://127.0.0.1:3000",  # HTTPS 127.0.0.1
 ]
-allowed_origins.extend(localhost_origins)
+
+# Only allow localhost origins when environment flag is enabled
+if allow_localhost_cors:
+    allowed_origins.extend(localhost_origins)
 
 # Add environment-specific origins
 if os.getenv("ADDITIONAL_CORS_ORIGINS"):
