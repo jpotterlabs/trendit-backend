@@ -338,8 +338,30 @@ async def require_active_subscription_with_usage_tracking(
     usage_limit_key = f"{usage_type}_per_month"
     usage_limit = limits.get(usage_limit_key, 0)
     
+    # Special handling for dashboard endpoints - allow burst usage
+    dashboard_endpoints = ["general_api", "data_summary", "jobs_list", "subscription_status"]
+    if endpoint in dashboard_endpoints:
+        # Get recent usage in last 5 minutes for burst detection
+        recent_period = datetime.now(timezone.utc) - timedelta(minutes=5)
+        recent_usage = _get_current_usage(user.id, usage_type, recent_period, db)
+        
+        # Allow up to 20 dashboard calls in 5 minutes (4 calls per minute)
+        if recent_usage >= 20:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Dashboard rate limit exceeded. Please wait a moment before refreshing.",
+                headers={
+                    "X-RateLimit-Type": "burst",
+                    "X-RateLimit-Window": "5_minutes",
+                    "Retry-After": "60"
+                }
+            )
+    
+    # Check monthly limits with 10% buffer for dashboard usage
+    effective_limit = int(usage_limit * 1.1) if endpoint in dashboard_endpoints else usage_limit
+    
     # Check if user has exceeded limits (-1 means unlimited for enterprise)
-    if usage_limit != -1 and current_usage >= usage_limit:
+    if effective_limit != -1 and current_usage >= effective_limit:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Usage limit exceeded. {current_usage}/{usage_limit} {usage_type} used this month. Upgrade your plan for higher limits.",
@@ -361,8 +383,10 @@ async def require_active_subscription_with_usage_tracking(
             detail="Active subscription required to access this endpoint",
         )
     
-    # Record the usage
-    _record_usage(user, usage_type, endpoint, period_start, period_end, db)
+    # Record the usage (but not for cached dashboard calls)
+    if not (endpoint in dashboard_endpoints and current_usage > 0 and (current_usage % 5) != 0):
+        # Only record every 5th dashboard call to reduce database load
+        _record_usage(user, usage_type, endpoint, period_start, period_end, db)
     
     # Add usage info to response headers for API consumers
     user._usage_info = {
@@ -380,9 +404,36 @@ async def require_api_call_limit(
     user: User = Depends(get_current_user_from_api_key),
     db: Session = Depends(get_db)
 ) -> User:
-    """Check API call limits"""
+    """Check API call limits for general API usage"""
     return await require_active_subscription_with_usage_tracking(
         "api_calls", "general_api", user, db
+    )
+
+async def require_dashboard_api_limit(
+    user: User = Depends(get_current_user_from_api_key),
+    db: Session = Depends(get_db)
+) -> User:
+    """Check API call limits for dashboard endpoints (more lenient)"""
+    return await require_active_subscription_with_usage_tracking(
+        "api_calls", "data_summary", user, db
+    )
+
+async def require_jobs_api_limit(
+    user: User = Depends(get_current_user_from_api_key),
+    db: Session = Depends(get_db)
+) -> User:
+    """Check API call limits for jobs endpoints"""
+    return await require_active_subscription_with_usage_tracking(
+        "api_calls", "jobs_list", user, db
+    )
+
+async def require_subscription_api_limit(
+    user: User = Depends(get_current_user_from_api_key),
+    db: Session = Depends(get_db)
+) -> User:
+    """Check API call limits for subscription status endpoint"""
+    return await require_active_subscription_with_usage_tracking(
+        "api_calls", "subscription_status", user, db
     )
 
 async def require_export_limit(

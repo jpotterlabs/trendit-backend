@@ -25,7 +25,7 @@ from models.models import (
     UsageRecord, BillingEvent
 )
 from services.paddle_service import paddle_service
-from api.auth import get_current_user_from_api_key
+from api.auth import get_current_user_from_api_key, require_subscription_api_limit
 from sqlalchemy import func
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
@@ -185,7 +185,7 @@ async def create_checkout_session(
 
 @router.get("/subscription/status", response_model=SubscriptionStatusResponse)
 async def get_subscription_status(
-    current_user: User = Depends(get_current_user_from_api_key),
+    current_user: User = Depends(require_subscription_api_limit),
     db: Session = Depends(get_db)
 ):
     """Get current user's subscription status and usage analytics
