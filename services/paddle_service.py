@@ -54,15 +54,15 @@ class PaddleService:
             "Accept": "application/json"
         }
         
-        # Trendit subscription tier configuration
+        # Trendit subscription tier configuration (increased limits to prevent dashboard issues)
         self.tier_config = {
             SubscriptionTier.FREE: {
                 "price": 0,
                 "paddle_price_id": None,
                 "limits": {
-                    "api_calls_per_month": 100,
-                    "exports_per_month": 5,
-                    "sentiment_analysis_per_month": 50,
+                    "api_calls_per_month": 500,  # Increased from 100 to allow dashboard usage
+                    "exports_per_month": 10,     # Increased from 5
+                    "sentiment_analysis_per_month": 100,  # Increased from 50
                     "data_retention_days": 30
                 }
             },

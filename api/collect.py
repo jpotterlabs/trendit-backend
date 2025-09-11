@@ -10,7 +10,7 @@ from models.database import get_db
 from models.models import CollectionJob, JobStatus, SortType, TimeFilter, RedditPost, RedditComment, User
 from services.data_collector import DataCollector
 from services.sentiment_analyzer import sentiment_analyzer
-from api.auth import require_api_call_limit
+from api.auth import require_api_call_limit, require_jobs_api_limit
 from services.date_filter_fix import ImprovedDateFiltering
 
 router = APIRouter(prefix="/api/collect", tags=["collection"])
@@ -185,7 +185,7 @@ async def list_collection_jobs(
     page: int = 1,
     per_page: int = 20,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_api_call_limit)
+    current_user: User = Depends(require_jobs_api_limit)
 ):
     """
     List collection jobs with optional filtering

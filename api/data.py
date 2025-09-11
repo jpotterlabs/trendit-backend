@@ -9,7 +9,7 @@ import logging
 from models.database import get_db
 from models.models import CollectionJob, RedditPost, RedditComment, RedditUser, Analytics, JobStatus, User
 from services.analytics import AnalyticsService
-from api.auth import require_api_call_limit
+from api.auth import require_api_call_limit, require_dashboard_api_limit
 
 router = APIRouter(prefix="/api/data", tags=["data"])
 logger = logging.getLogger(__name__)
@@ -510,7 +510,7 @@ async def get_job_analytics(
 @router.get("/summary", response_model=Dict[str, Any])
 async def get_data_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_api_call_limit)
+    current_user: User = Depends(require_dashboard_api_limit)
 ):
     """
     Get overall summary of stored data

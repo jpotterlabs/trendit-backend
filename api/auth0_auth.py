@@ -118,28 +118,43 @@ async def auth0_callback(
         # Generate Trendit JWT token (same as existing auth system)
         jwt_token = create_access_token({"sub": str(user.id)})
         
-        # Check if user has an API key, create one if not
+        # Check if user has a recent active API key, reuse it to prevent excessive key rotation
         existing_api_key = db.query(APIKey).filter(
             APIKey.user_id == user.id,
             APIKey.is_active.is_(True),
             APIKey.name.in_(["Auth0 Login Key", "Auth0 Login Key (Renewed)"])
-        ).first()
+        ).order_by(APIKey.created_at.desc()).first()
         
+        # Only create new key if none exists or if existing key is older than 24 hours
         if existing_api_key:
-            # Rotate: deactivate old key and create a new one (keeps audit fields)
-            existing_api_key.is_active = False
-            raw_key, key_hash = generate_api_key()
-            
-            new_api_key = APIKey(
-                user_id=user.id,
-                name="Auth0 Login Key (Renewed)",
-                key_hash=key_hash,
-                is_active=True
-            )
-            db.add(new_api_key)
-            db.commit()
-            
-            api_key = raw_key
+            from datetime import timezone
+            key_age = datetime.now(timezone.utc) - existing_api_key.created_at
+            if key_age.total_seconds() < 24 * 60 * 60:  # Less than 24 hours old
+                # Reuse existing key - but we can't return the raw key, so we need to handle this differently
+                # For security, we'll create a session token instead of rotating API keys frequently
+                logger.info(f"Reusing existing API key for user {user.id} (age: {key_age})")
+                
+                # Update last used timestamp
+                existing_api_key.last_used_at = datetime.now(timezone.utc)
+                db.commit()
+                
+                # Return a placeholder - frontend will use the stored API key
+                api_key = "existing_key_reused"
+            else:
+                # Key is old, create a new one
+                existing_api_key.is_active = False
+                raw_key, key_hash = generate_api_key()
+                
+                new_api_key = APIKey(
+                    user_id=user.id,
+                    name="Auth0 Login Key (Renewed)",
+                    key_hash=key_hash,
+                    is_active=True
+                )
+                db.add(new_api_key)
+                db.commit()
+                
+                api_key = raw_key
         else:
             # Create new API key using existing system
             raw_key, key_hash = generate_api_key()

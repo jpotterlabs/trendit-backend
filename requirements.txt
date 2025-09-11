@@ -34,3 +34,6 @@ pyarrow==18.1.0
 
 # Testing
 httpx==0.28.1
+
+# Rate Limiting & Caching
+redis==5.2.1
