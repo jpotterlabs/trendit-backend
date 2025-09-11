@@ -45,6 +45,10 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created/verified")
         
+        # Initialize rate limiter
+        from services.rate_limiter import rate_limiter
+        logger.info("Rate limiter initialized (Redis or in-memory fallback)")
+        
     except Exception as e:
         logger.error(f"Error during startup: {e}")
         # You might want to raise the exception to prevent the app from starting

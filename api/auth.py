@@ -14,6 +14,7 @@ from sqlalchemy import func, and_
 from models.database import get_db
 from models.models import User, APIKey, SubscriptionStatus, PaddleSubscription, SubscriptionTier, UsageRecord
 from services.auth0_service import auth0_service
+from services.rate_limiter import check_dashboard_burst_limit, record_dashboard_request
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -338,24 +339,28 @@ async def require_active_subscription_with_usage_tracking(
     usage_limit_key = f"{usage_type}_per_month"
     usage_limit = limits.get(usage_limit_key, 0)
     
-    # Special handling for dashboard endpoints - allow burst usage
+    # Special handling for dashboard endpoints - Redis-based burst limiting
     dashboard_endpoints = ["general_api", "data_summary", "jobs_list", "subscription_status"]
     if endpoint in dashboard_endpoints:
-        # Get recent usage in last 5 minutes for burst detection
-        recent_period = datetime.now(timezone.utc) - timedelta(minutes=5)
-        recent_usage = _get_current_usage(user.id, usage_type, recent_period, db)
+        # Check burst limit using Redis sliding window (accurate counting)
+        is_allowed, current_burst_count = await check_dashboard_burst_limit(user.id, endpoint)
         
         # Allow up to 20 dashboard calls in 5 minutes (4 calls per minute)
-        if recent_usage >= 20:
+        if not is_allowed:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Dashboard rate limit exceeded. Please wait a moment before refreshing.",
+                detail=f"Dashboard rate limit exceeded ({current_burst_count}/20 requests in 5 minutes). Please wait a moment before refreshing.",
                 headers={
                     "X-RateLimit-Type": "burst",
                     "X-RateLimit-Window": "5_minutes",
+                    "X-RateLimit-Current": str(current_burst_count),
+                    "X-RateLimit-Limit": "20",
                     "Retry-After": "60"
                 }
             )
+        
+        # Record this request in Redis for accurate burst tracking
+        await record_dashboard_request(user.id, endpoint)
     
     # Check monthly limits with 10% buffer for dashboard usage
     effective_limit = int(usage_limit * 1.1) if endpoint in dashboard_endpoints else usage_limit
