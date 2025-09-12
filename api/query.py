@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query as FastAPIQuery, Depends
 from typing import List, Optional, Dict, Any
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 from pydantic import BaseModel, Field
 import time
 import logging
 
 from services.data_collector import DataCollector
+from services.date_filter_fix import ImprovedDateFiltering
 from models.models import User
 from api.auth import require_api_call_limit
 
@@ -142,6 +143,10 @@ async def query_posts(
         reddit_calls = 0
         all_results = []
         
+        # Use user-provided sort and time_filter parameters directly
+        effective_sort_type = request.sort_type
+        effective_time_filter = request.time_filter
+        
         for subreddit in request.subreddits:
             reddit_calls += 1
             
@@ -152,8 +157,8 @@ async def query_posts(
                     posts = await reddit.search_posts(
                         query=search_query,
                         subreddit_name=subreddit,
-                        sort=request.sort_type,
-                        time_filter=request.time_filter,
+                        sort=effective_sort_type,
+                        time_filter=effective_time_filter,
                         limit=min(request.limit * 2, 1000)  # Get extra for filtering
                     )
                 filters_applied.append("keyword_search")
@@ -162,8 +167,8 @@ async def query_posts(
                 async with collector.reddit_client as reddit:
                     posts = await reddit.get_subreddit_posts(
                         subreddit_name=subreddit,
-                        sort_type=request.sort_type,
-                        time_filter=request.time_filter,
+                        sort_type=effective_sort_type,
+                        time_filter=effective_time_filter,
                         limit=min(request.limit * 2, 1000)
                     )
             
@@ -173,14 +178,27 @@ async def query_posts(
         filtered_results = []
         
         for post in all_results:
-            # Date filtering
-            if request.date_from and post.get('created_utc'):
-                if post['created_utc'] < request.date_from:
-                    continue
-                    
-            if request.date_to and post.get('created_utc'):
-                if post['created_utc'] > request.date_to:
-                    continue
+            # Date filtering - use improved logic with buffers
+            if request.date_from or request.date_to:
+                # Create date range for filtering (using timezone-aware datetimes)
+                if request.date_from and request.date_to:
+                    # Use the improved date filtering logic
+                    if not ImprovedDateFiltering.should_include_post(post, request.date_from, request.date_to):
+                        continue
+                elif request.date_from:
+                    # Only start date provided - check if post is after start date with buffer
+                    buffer = timedelta(hours=2)
+                    date_from_with_buffer = request.date_from - buffer
+                    if not ImprovedDateFiltering.should_include_post(post, date_from_with_buffer, datetime.now(timezone.utc)):
+                        continue
+                elif request.date_to:
+                    # Only end date provided - check if post is before end date with buffer
+                    buffer = timedelta(hours=2)
+                    date_to_with_buffer = request.date_to + buffer
+                    # Use a very early date as the start to allow all posts before end date
+                    very_early_date = datetime(2005, 1, 1, tzinfo=timezone.utc)  # Before Reddit existed
+                    if not ImprovedDateFiltering.should_include_post(post, very_early_date, date_to_with_buffer):
+                        continue
             
             # Score filtering
             if request.min_score and post.get('score', 0) < request.min_score:

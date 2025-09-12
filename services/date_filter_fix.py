@@ -97,7 +97,17 @@ class ImprovedDateFiltering:
             # Use lenient filtering - allow posts slightly outside the range
             # This accounts for Reddit's internal time filtering behavior
             buffer = timedelta(hours=2)
-            is_within_range = (date_from - buffer) <= post_datetime <= (date_to + buffer)
+            
+            # Ensure date_from and date_to have timezone info for comparison
+            date_from_tz = date_from
+            date_to_tz = date_to
+            
+            if date_from_tz and date_from_tz.tzinfo is None:
+                date_from_tz = date_from_tz.replace(tzinfo=timezone.utc)
+            if date_to_tz and date_to_tz.tzinfo is None:
+                date_to_tz = date_to_tz.replace(tzinfo=timezone.utc)
+                
+            is_within_range = (date_from_tz - buffer) <= post_datetime <= (date_to_tz + buffer)
             
             if not is_within_range:
                 logger.debug(f"Post {post_data.get('reddit_id')} outside range: {post_datetime}")
