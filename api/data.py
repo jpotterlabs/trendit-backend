@@ -11,7 +11,7 @@ from models.models import CollectionJob, RedditPost, RedditComment, RedditUser, 
 from services.analytics import AnalyticsService
 from api.auth import require_api_call_limit, require_dashboard_api_limit
 
-router = APIRouter(prefix="/api/data", tags=["data"])
+router = APIRouter(prefix="/api/databrowser", tags=["databrowser"])
 logger = logging.getLogger(__name__)
 
 # Request/Response Models

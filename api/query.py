@@ -11,7 +11,7 @@ from models.models import User
 from api.auth import require_api_call_limit
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/query", tags=["query"])
+router = APIRouter(prefix="/api/datastream", tags=["datastream"])
 collector = DataCollector()
 
 # Request Models
@@ -507,7 +507,7 @@ async def query_examples(
         "examples": {
             "complex_post_query": {
                 "method": "POST",
-                "endpoint": "/api/query/posts",
+                "endpoint": "/api/datastream/posts",
                 "description": "Find high-scoring posts about Python in programming subreddits",
                 "body": {
                     "subreddits": ["python", "programming", "learnpython"],
@@ -522,7 +522,7 @@ async def query_examples(
             },
             "comment_analysis": {
                 "method": "POST", 
-                "endpoint": "/api/query/comments",
+                "endpoint": "/api/datastream/comments",
                 "description": "Analyze high-quality comments in specific posts",
                 "body": {
                     "post_ids": ["abc123", "def456"],
@@ -534,7 +534,7 @@ async def query_examples(
             },
             "user_research": {
                 "method": "POST",
-                "endpoint": "/api/query/users", 
+                "endpoint": "/api/datastream/users", 
                 "description": "Find experienced users in technical subreddits",
                 "body": {
                     "subreddits": ["python", "MachineLearning"],

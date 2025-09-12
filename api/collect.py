@@ -13,7 +13,7 @@ from services.sentiment_analyzer import sentiment_analyzer
 from api.auth import require_api_call_limit, require_jobs_api_limit
 from services.date_filter_fix import ImprovedDateFiltering
 
-router = APIRouter(prefix="/api/collect", tags=["collection"])
+router = APIRouter(prefix="/api/datastore", tags=["datastore"])
 logger = logging.getLogger(__name__)
 
 # Request/Response Models

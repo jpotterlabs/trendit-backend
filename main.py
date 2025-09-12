@@ -8,9 +8,9 @@ from contextlib import asynccontextmanager
 
 from models.database import engine, Base
 from api.scenarios import router as scenarios_router
-from api.query import router as query_router
-from api.collect import router as collect_router
-from api.data import router as data_router
+from api.query import router as datastream_router
+from api.collect import router as datastore_router
+from api.data import router as databrowser_router
 from api.export import router as export_router
 from api.sentiment import router as sentiment_router
 from api.auth import router as auth_router
@@ -115,9 +115,9 @@ app.include_router(auth0_router)
 app.include_router(billing_router)
 app.include_router(webhooks_router)
 app.include_router(scenarios_router)
-app.include_router(query_router)
-app.include_router(collect_router)
-app.include_router(data_router)
+app.include_router(datastream_router)
+app.include_router(datastore_router)
+app.include_router(databrowser_router)
 app.include_router(export_router)
 app.include_router(sentiment_router)
 

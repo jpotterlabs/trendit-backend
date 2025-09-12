@@ -103,8 +103,8 @@ async def root():
         },
         "endpoints": {
             "scenarios": "/api/scenarios/examples",
-            "collection": "/api/collect/jobs",
-            "data_query": "/api/data/summary",
+            "collection": "/api/datastore/jobs",
+            "data_query": "/api/databrowser/summary",
             "export": "/api/export/formats",
             "sentiment": "/api/sentiment/status",
             "docs": "/docs",

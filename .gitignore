@@ -190,6 +190,13 @@ Thumbs.db
 *.swp
 *.swo
 
+# Node.js dependencies (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
 # FastAPI specific
 *.pid
 
