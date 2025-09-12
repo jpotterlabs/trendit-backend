@@ -186,18 +186,14 @@ async def query_posts(
                     if not ImprovedDateFiltering.should_include_post(post, request.date_from, request.date_to):
                         continue
                 elif request.date_from:
-                    # Only start date provided - check if post is after start date with buffer
-                    buffer = timedelta(hours=2)
-                    date_from_with_buffer = request.date_from - buffer
-                    if not ImprovedDateFiltering.should_include_post(post, date_from_with_buffer, datetime.now(timezone.utc)):
+                    # Only start date provided - use raw date, let ImprovedDateFiltering handle buffering
+                    if not ImprovedDateFiltering.should_include_post(post, request.date_from, datetime.now(timezone.utc)):
                         continue
                 elif request.date_to:
-                    # Only end date provided - check if post is before end date with buffer
-                    buffer = timedelta(hours=2)
-                    date_to_with_buffer = request.date_to + buffer
+                    # Only end date provided - use raw date, let ImprovedDateFiltering handle buffering
                     # Use a very early date as the start to allow all posts before end date
                     very_early_date = datetime(2005, 1, 1, tzinfo=timezone.utc)  # Before Reddit existed
-                    if not ImprovedDateFiltering.should_include_post(post, very_early_date, date_to_with_buffer):
+                    if not ImprovedDateFiltering.should_include_post(post, very_early_date, request.date_to):
                         continue
             
             # Score filtering
