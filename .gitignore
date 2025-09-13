@@ -208,3 +208,4 @@ htmlcov/
 *.bak
 *.backup
 .vercel
+node_modules/
