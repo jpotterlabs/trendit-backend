@@ -37,3 +37,6 @@ httpx==0.28.1
 
 # Rate Limiting & Caching
 redis==5.2.1
+
+# Error Monitoring
+sentry-sdk[fastapi]==2.37.1

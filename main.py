@@ -5,6 +5,10 @@ from fastapi.responses import JSONResponse
 import logging
 import uvicorn
 from contextlib import asynccontextmanager
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from models.database import engine, Base
 from api.scenarios import router as scenarios_router
@@ -22,6 +26,25 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Initialize Sentry for error monitoring
+sentry_dsn = os.getenv("SENTRY_DSN")
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        integrations=[
+            FastApiIntegration(auto_enabling_integrations=True),
+            SqlalchemyIntegration(),
+            LoggingIntegration(
+                level=logging.INFO,        # Capture info and above as breadcrumbs
+                event_level=logging.ERROR  # Send errors as events
+            ),
+        ],
+        traces_sample_rate=1.0 if os.getenv("DEBUG", "false").lower() == "true" else 0.1,
+        profiles_sample_rate=1.0 if os.getenv("DEBUG", "false").lower() == "true" else 0.1,
+        environment=os.getenv("ENVIRONMENT", "development"),
+        before_send=lambda event, hint: event if event.get('level') != 'info' else None,
+    )
 
 # Configure logging
 logging.basicConfig(
@@ -169,23 +192,33 @@ async def health_check():
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db.close()
-        
+
         # Test Reddit API credentials
         reddit_configured = all([
             os.getenv("REDDIT_CLIENT_ID"),
             os.getenv("REDDIT_CLIENT_SECRET")
         ])
-        
+
+        # Test Sentry configuration
+        sentry_configured = bool(os.getenv("SENTRY_DSN"))
+
         return {
             "status": "healthy",
             "database": "connected",
             "reddit_api": "configured" if reddit_configured else "not_configured",
+            "sentry": "configured" if sentry_configured else "not_configured",
             "timestamp": "2024-01-01T00:00:00Z"
         }
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
+
+@app.get("/debug/test-error")
+async def test_error():
+    """Test endpoint to verify Sentry error reporting - REMOVE IN PRODUCTION"""
+    logger.info("Test error endpoint called - this should appear in Sentry as breadcrumb")
+    raise Exception("This is a test error to verify Sentry integration is working correctly")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
