@@ -30,20 +30,24 @@ load_dotenv()
 # Initialize Sentry for error monitoring
 sentry_dsn = os.getenv("SENTRY_DSN")
 if sentry_dsn:
+    # Parse DEBUG environment variable once
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+
     sentry_sdk.init(
         dsn=sentry_dsn,
         integrations=[
-            FastApiIntegration(auto_enabling_integrations=True),
+            FastApiIntegration(),
             SqlalchemyIntegration(),
             LoggingIntegration(
                 level=logging.INFO,        # Capture info and above as breadcrumbs
                 event_level=logging.ERROR  # Send errors as events
             ),
         ],
-        traces_sample_rate=1.0 if os.getenv("DEBUG", "false").lower() == "true" else 0.1,
-        profiles_sample_rate=1.0 if os.getenv("DEBUG", "false").lower() == "true" else 0.1,
+        traces_sample_rate=1.0 if debug else 0.1,
+        profiles_sample_rate=1.0 if debug else 0.1,
+        auto_enabling_integrations=debug,
         environment=os.getenv("ENVIRONMENT", "development"),
-        before_send=lambda event, hint: event if event.get('level') != 'info' else None,
+        before_send=lambda event, _hint: event if event.get('level') != 'info' else None,
     )
 
 # Configure logging
