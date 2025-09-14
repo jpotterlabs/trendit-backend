@@ -13,6 +13,7 @@ from models.database import get_db
 from models.models import User, APIKey, SubscriptionStatus
 from services.auth0_service import auth0_service
 from api.auth import create_access_token, generate_api_key
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -129,7 +130,6 @@ async def auth0_callback(
         
         # Only create new key if none exists or if existing key is older than 24 hours
         if existing_api_key:
-            from datetime import timezone
             key_age = datetime.now(timezone.utc) - existing_api_key.created_at
             if key_age.total_seconds() < 24 * 60 * 60:  # Less than 24 hours old
                 # Reuse existing key - but we can't return the raw key, so we need to handle this differently
