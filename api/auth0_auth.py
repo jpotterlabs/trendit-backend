@@ -98,6 +98,8 @@ async def auth0_callback(
     validates it with Auth0, creates/updates the user, and returns Trendit JWT + API key
     """
     try:
+        logger.info(f"Auth0 callback received, access_token length: {len(callback_data.access_token) if callback_data.access_token else 0}")
+
         # Verify the access token and get user info from Auth0
         user_info = auth0_service.get_user_info(callback_data.access_token)
         
@@ -192,10 +194,19 @@ async def auth0_callback(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Auth0 callback error: {e}")
+        logger.error(f"Auth0 callback error: {e}", exc_info=True)
+        # Provide more detailed error for debugging
+        error_detail = f"Failed to process Auth0 callback: {str(e)}"
+        if "get_user_info" in str(e):
+            error_detail += " (Auth0 userinfo API failed)"
+        elif "database" in str(e).lower() or "sql" in str(e).lower():
+            error_detail += " (Database operation failed)"
+        elif "auth0_service" in str(e):
+            error_detail += " (Auth0 service error)"
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process Auth0 callback"
+            detail=error_detail
         )
 
 @router.get("/userinfo")
