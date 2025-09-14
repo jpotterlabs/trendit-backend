@@ -71,8 +71,8 @@ app = FastAPI(
 
 # Configure CORS for production and development
 allowed_origins = [
-    "https://reddit.potterlabs.xyz",  # Production frontend
-    "https://reddit.potterlabs.xyz/",  # With trailing slash
+    "https://trendit.potterlabs.xyz",  # Production frontend
+    "https://trendit.potterlabs.xyz/",  # With trailing slash
 ]
 
 # Read localhost CORS environment flag
