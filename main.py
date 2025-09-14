@@ -220,13 +220,25 @@ async def health_check():
 
 @app.get("/debug/test-error")
 async def test_error():
-    """Test endpoint to verify Sentry error reporting - REMOVE IN PRODUCTION"""
+    """Test endpoint to verify Sentry error reporting - Only available in DEBUG mode"""
+    # Guard endpoint behind DEBUG configuration to prevent production abuse
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+
+    if not debug:
+        raise HTTPException(status_code=404, detail="Not found")
+
     logger.info("Test error endpoint called - this should appear in Sentry as breadcrumb")
-    raise Exception("This is a test error to verify Sentry integration is working correctly")
+
+    # Create test exception and explicitly capture it to Sentry before raising
+    test_exception = Exception("This is a test error to verify Sentry integration is working correctly")
+    sentry_sdk.capture_exception(test_exception)
+    raise test_exception
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler"""
+    # Capture exception to Sentry for monitoring
+    sentry_sdk.capture_exception(exc)
     logger.error(f"Unhandled exception: {exc}")
     return JSONResponse(
         status_code=500,
