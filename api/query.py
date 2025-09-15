@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query as FastAPIQuery, Depends
+from fastapi import APIRouter, HTTPException, Query as FastAPIQuery, Depends, Form
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date, timezone, timedelta
 from pydantic import BaseModel, Field
@@ -17,70 +17,222 @@ collector = DataCollector()
 # Request Models
 class PostQueryRequest(BaseModel):
     """Advanced post query parameters"""
-    subreddits: List[str] = Field(..., description="List of subreddit names")
-    keywords: Optional[List[str]] = Field(None, description="Keywords to search for")
-    exclude_keywords: Optional[List[str]] = Field(None, description="Keywords to exclude")
-    
-    # Date filtering
-    date_from: Optional[datetime] = Field(None, description="Start date (ISO format)")
-    date_to: Optional[datetime] = Field(None, description="End date (ISO format)")
-    
+    subreddits: List[str] = Field(
+        ...,
+        example=["python", "MachineLearning", "datascience"],
+        description="List of subreddit names (without r/ prefix)"
+    )
+    keywords: Optional[List[str]] = Field(
+        None,
+        example=["machine learning", "tensorflow", "neural networks", "AI"],
+        description="Keywords to search for in post titles and content"
+    )
+    exclude_keywords: Optional[List[str]] = Field(
+        None,
+        example=["beginner", "tutorial", "help"],
+        description="Keywords to exclude from results"
+    )
+
+    # Note: Query API uses Reddit's native time_filter only
+    # For custom date ranges, use Collection API (/api/collect/jobs) instead
+    # Date fields removed as they don't work with live Reddit queries
+
     # Score filtering
-    min_score: Optional[int] = Field(None, description="Minimum post score")
-    max_score: Optional[int] = Field(None, description="Maximum post score")
-    min_upvote_ratio: Optional[float] = Field(None, description="Minimum upvote ratio (0.0-1.0)")
-    max_upvote_ratio: Optional[float] = Field(None, description="Maximum upvote ratio (0.0-1.0)")
-    
+    min_score: Optional[int] = Field(
+        None,
+        example=50,
+        description="Minimum post upvote score"
+    )
+    max_score: Optional[int] = Field(
+        None,
+        example=5000,
+        description="Maximum post upvote score"
+    )
+    min_upvote_ratio: Optional[float] = Field(
+        None,
+        example=0.8,
+        description="Minimum upvote ratio (0.0-1.0) - higher means more upvotes vs downvotes"
+    )
+    max_upvote_ratio: Optional[float] = Field(
+        None,
+        example=1.0,
+        description="Maximum upvote ratio (0.0-1.0)"
+    )
+
     # Comment filtering
-    min_comments: Optional[int] = Field(None, description="Minimum number of comments")
-    max_comments: Optional[int] = Field(None, description="Maximum number of comments")
-    
+    min_comments: Optional[int] = Field(
+        None,
+        example=10,
+        description="Minimum number of comments on the post"
+    )
+    max_comments: Optional[int] = Field(
+        None,
+        example=500,
+        description="Maximum number of comments on the post"
+    )
+
     # Author filtering
-    include_authors: Optional[List[str]] = Field(None, description="Include only these authors")
-    exclude_authors: Optional[List[str]] = Field(None, description="Exclude these authors")
-    exclude_deleted: bool = Field(True, description="Exclude deleted posts")
-    exclude_removed: bool = Field(True, description="Exclude removed posts")
-    
+    include_authors: Optional[List[str]] = Field(
+        None,
+        example=["username1", "username2"],
+        description="Include posts only from these specific authors"
+    )
+    exclude_authors: Optional[List[str]] = Field(
+        None,
+        example=["bot_account", "spam_user"],
+        description="Exclude posts from these specific authors"
+    )
+    exclude_deleted: bool = Field(
+        True,
+        example=True,
+        description="Exclude posts marked as [deleted]"
+    )
+    exclude_removed: bool = Field(
+        True,
+        example=True,
+        description="Exclude posts removed by moderators"
+    )
+
     # Content filtering
-    content_types: Optional[List[str]] = Field(None, description="Content types: text, link, image, video")
-    exclude_nsfw: bool = Field(True, description="Exclude NSFW content")
-    exclude_spoilers: bool = Field(True, description="Exclude spoiler content")
-    exclude_stickied: bool = Field(True, description="Exclude stickied posts")
-    
+    content_types: Optional[List[str]] = Field(
+        None,
+        example=["text", "link"],
+        description="Filter by content types: text, link, image, video"
+    )
+    exclude_nsfw: bool = Field(
+        True,
+        example=True,
+        description="Exclude NSFW (Not Safe For Work) content"
+    )
+    exclude_spoilers: bool = Field(
+        True,
+        example=True,
+        description="Exclude posts marked with spoiler tags"
+    )
+    exclude_stickied: bool = Field(
+        True,
+        example=True,
+        description="Exclude stickied/pinned posts"
+    )
+
     # Reddit API parameters
-    sort_type: str = Field("hot", description="Sort type: hot, new, top, rising, controversial")
-    time_filter: str = Field("all", description="Time filter: hour, day, week, month, year, all")
-    limit: int = Field(100, description="Maximum results (1-1000)")
-    
+    sort_type: str = Field(
+        "hot",
+        example="top",
+        description="Sort type: hot, new, top, rising, controversial"
+    )
+    time_filter: str = Field(
+        "all",
+        example="month",
+        description="Time filter: hour, day, week, month, year, all (for top/controversial sort)"
+    )
+    limit: int = Field(
+        100,
+        ge=1,
+        le=1000,
+        example=250,
+        description="Maximum number of posts to return (1-1000)"
+    )
+
     # Advanced options
-    include_self_text: bool = Field(True, description="Include post self text")
-    include_awards: bool = Field(False, description="Include award information")
+    include_self_text: bool = Field(
+        True,
+        example=True,
+        description="Include the full text content of text posts"
+    )
+    include_awards: bool = Field(
+        False,
+        example=False,
+        description="Include Reddit award information (increases response size)"
+    )
     
 class CommentQueryRequest(BaseModel):
     """Advanced comment query parameters"""
-    subreddits: Optional[List[str]] = Field(None, description="List of subreddit names")
-    post_ids: Optional[List[str]] = Field(None, description="Specific post IDs to get comments from")
-    keywords: Optional[List[str]] = Field(None, description="Keywords to search for in comments")
-    exclude_keywords: Optional[List[str]] = Field(None, description="Keywords to exclude")
-    
+    subreddits: Optional[List[str]] = Field(
+        None,
+        example=["AskReddit", "science", "technology"],
+        description="Filter comments from specific subreddits (without r/ prefix)"
+    )
+    post_ids: Optional[List[str]] = Field(
+        None,
+        example=["abc123", "def456", "ghi789"],
+        description="Get comments from specific Reddit post IDs"
+    )
+    keywords: Optional[List[str]] = Field(
+        None,
+        example=["interesting", "helpful", "detailed analysis"],
+        description="Search for these keywords in comment text"
+    )
+    exclude_keywords: Optional[List[str]] = Field(
+        None,
+        example=["spam", "bot", "deleted"],
+        description="Exclude comments containing these keywords"
+    )
+
     # Score filtering
-    min_score: Optional[int] = Field(None, description="Minimum comment score")
-    max_score: Optional[int] = Field(None, description="Maximum comment score")
-    
+    min_score: Optional[int] = Field(
+        None,
+        example=5,
+        description="Minimum comment upvote score"
+    )
+    max_score: Optional[int] = Field(
+        None,
+        example=1000,
+        description="Maximum comment upvote score"
+    )
+
     # Author filtering
-    include_authors: Optional[List[str]] = Field(None, description="Include only these authors")
-    exclude_authors: Optional[List[str]] = Field(None, description="Exclude these authors")
-    exclude_deleted: bool = Field(True, description="Exclude deleted comments")
-    exclude_removed: bool = Field(True, description="Exclude removed comments")
-    
+    include_authors: Optional[List[str]] = Field(
+        None,
+        example=["expert_user", "verified_contributor"],
+        description="Include comments only from these specific authors"
+    )
+    exclude_authors: Optional[List[str]] = Field(
+        None,
+        example=["bot_account", "spam_user"],
+        description="Exclude comments from these specific authors"
+    )
+    exclude_deleted: bool = Field(
+        True,
+        example=True,
+        description="Exclude comments marked as [deleted]"
+    )
+    exclude_removed: bool = Field(
+        True,
+        example=True,
+        description="Exclude comments removed by moderators"
+    )
+
     # Comment structure
-    max_depth: Optional[int] = Field(None, description="Maximum comment depth")
-    min_depth: Optional[int] = Field(None, description="Minimum comment depth")
-    include_op_replies: Optional[bool] = Field(None, description="Include/exclude OP replies")
-    
+    max_depth: Optional[int] = Field(
+        None,
+        example=3,
+        description="Maximum depth in comment thread (0=top-level, 1=replies, etc.)"
+    )
+    min_depth: Optional[int] = Field(
+        None,
+        example=0,
+        description="Minimum depth in comment thread (0=top-level only)"
+    )
+    include_op_replies: Optional[bool] = Field(
+        None,
+        example=True,
+        description="Include/exclude replies from the original post author"
+    )
+
     # Reddit API parameters
-    sort_type: str = Field("top", description="Sort type: top, new, best, controversial")
-    limit: int = Field(100, description="Maximum results (1-1000)")
+    sort_type: str = Field(
+        "top",
+        example="best",
+        description="Sort comments by: top, new, best, controversial"
+    )
+    limit: int = Field(
+        100,
+        ge=1,
+        le=1000,
+        example=200,
+        description="Maximum number of comments to return (1-1000)"
+    )
     
 class UserQueryRequest(BaseModel):
     """Advanced user query parameters"""
@@ -271,6 +423,50 @@ async def query_posts(
     except Exception as e:
         logger.error(f"Post query failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Form-based POST endpoint (easier to use in Swagger UI)
+@router.post("/posts/form", response_model=QueryResponse)
+async def query_posts_form(
+    subreddits: str = Form(..., description="Comma-separated subreddit names (e.g. python,MachineLearning)", example="python,MachineLearning,datascience"),
+    keywords: Optional[str] = Form(None, description="Comma-separated keywords (e.g. AI,neural networks)", example="machine learning,AI,tensorflow"),
+    sort_type: str = Form("hot", description="Sort type: hot, new, top, rising, controversial", example="top"),
+    time_filter: str = Form("week", description="Time filter: hour, day, week, month, year, all", example="month"),
+    limit: int = Form(100, description="Maximum results (1-1000)", example=250),
+    min_score: Optional[int] = Form(None, description="Minimum post upvote score", example=50),
+    max_score: Optional[int] = Form(None, description="Maximum post upvote score", example=5000),
+    min_upvote_ratio: Optional[float] = Form(None, description="Minimum upvote ratio (0.0-1.0)", example=0.8),
+    min_comments: Optional[int] = Form(None, description="Minimum number of comments", example=10),
+    max_comments: Optional[int] = Form(None, description="Maximum number of comments", example=500),
+    exclude_keywords: Optional[str] = Form(None, description="Comma-separated keywords to exclude", example="beginner,tutorial"),
+    exclude_nsfw: bool = Form(True, description="Exclude NSFW content"),
+    exclude_stickied: bool = Form(True, description="Exclude stickied posts"),
+    include_self_text: bool = Form(True, description="Include post content text"),
+    current_user: User = Depends(require_api_call_limit)
+):
+    """
+    Query posts using form parameters (easier to use in Swagger UI than JSON)
+
+    This endpoint provides the same functionality as POST /posts but with individual
+    form fields instead of JSON, making it much easier to test in the Swagger UI.
+    """
+    # Convert form data to request object
+    request = PostQueryRequest(
+        subreddits=subreddits.split(",") if subreddits else [],
+        keywords=keywords.split(",") if keywords else None,
+        exclude_keywords=exclude_keywords.split(",") if exclude_keywords else None,
+        sort_type=sort_type,
+        time_filter=time_filter,
+        limit=limit,
+        min_score=min_score,
+        max_score=max_score,
+        min_upvote_ratio=min_upvote_ratio,
+        min_comments=min_comments,
+        max_comments=max_comments,
+        exclude_nsfw=exclude_nsfw,
+        exclude_stickied=exclude_stickied,
+        include_self_text=include_self_text
+    )
+    return await query_posts(request, current_user)
 
 @router.post("/comments", response_model=QueryResponse)
 async def query_comments(

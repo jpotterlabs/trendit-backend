@@ -19,25 +19,85 @@ logger = logging.getLogger(__name__)
 # Request/Response Models
 class CollectionJobRequest(BaseModel):
     """Request model for creating a new collection job"""
-    
+
     # Collection targets
-    subreddits: List[str] = Field(..., description="List of subreddit names")
-    sort_types: List[SortType] = Field(default=[SortType.HOT], description="Sort types to use")
-    time_filters: List[TimeFilter] = Field(default=[TimeFilter.WEEK], description="Time filters to apply")
-    
+    subreddits: List[str] = Field(
+        ...,
+        example=["python", "MachineLearning", "datascience"],
+        description="List of subreddit names (without r/ prefix)"
+    )
+    sort_types: List[SortType] = Field(
+        default=[SortType.HOT],
+        example=[SortType.HOT, SortType.TOP],
+        description="Sort types to use for collecting posts"
+    )
+    time_filters: List[TimeFilter] = Field(
+        default=[TimeFilter.WEEK],
+        example=[TimeFilter.WEEK, TimeFilter.MONTH],
+        description="Time filters to apply for post collection"
+    )
+
     # Limits
-    post_limit: int = Field(default=100, ge=1, le=10000, description="Maximum posts to collect")
-    comment_limit: int = Field(default=50, ge=0, le=1000, description="Maximum comments per post")
-    max_comment_depth: int = Field(default=3, ge=0, le=10, description="Maximum comment thread depth")
-    
+    post_limit: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        example=250,
+        description="Maximum posts to collect per subreddit"
+    )
+    comment_limit: int = Field(
+        default=50,
+        ge=0,
+        le=1000,
+        example=25,
+        description="Maximum comments per post to collect"
+    )
+    max_comment_depth: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        example=2,
+        description="Maximum depth of comment threads to traverse"
+    )
+
     # Filters
-    keywords: Optional[List[str]] = Field(default=None, description="Search keywords")
-    min_score: int = Field(default=0, description="Minimum post score")
-    min_upvote_ratio: float = Field(default=0.0, ge=0.0, le=1.0, description="Minimum upvote ratio")
-    date_from: Optional[datetime] = Field(default=None, description="Start date filter")
-    date_to: Optional[datetime] = Field(default=None, description="End date filter")
-    exclude_nsfw: bool = Field(default=True, description="Exclude NSFW content")
-    anonymize_users: bool = Field(default=True, description="Anonymize user information")
+    keywords: Optional[List[str]] = Field(
+        default=None,
+        example=["artificial intelligence", "neural networks", "tensorflow"],
+        description="Keywords to filter posts by (searches title and content)"
+    )
+    min_score: int = Field(
+        default=0,
+        example=10,
+        description="Minimum upvote score for posts"
+    )
+    min_upvote_ratio: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        example=0.8,
+        description="Minimum upvote ratio (0.0-1.0) for posts"
+    )
+    date_from: Optional[datetime] = Field(
+        default=None,
+        example="2024-01-01T00:00:00Z",
+        description="Start date filter (ISO format)"
+    )
+    date_to: Optional[datetime] = Field(
+        default=None,
+        example="2024-12-31T23:59:59Z",
+        description="End date filter (ISO format)"
+    )
+    exclude_nsfw: bool = Field(
+        default=True,
+        example=True,
+        description="Whether to exclude NSFW (Not Safe For Work) content"
+    )
+    anonymize_users: bool = Field(
+        default=True,
+        example=True,
+        description="Whether to anonymize usernames in collected data"
+    )
 
 class CollectionJobResponse(BaseModel):
     """Response model for collection job information"""
