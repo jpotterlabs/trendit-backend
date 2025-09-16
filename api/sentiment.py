@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import logging
 
@@ -11,10 +11,22 @@ router = APIRouter(prefix="/api/sentiment", tags=["sentiment"])
 logger = logging.getLogger(__name__)
 
 class SentimentAnalysisRequest(BaseModel):
-    text: str
+    text: str = Field(
+        ...,
+        example="I absolutely love this new machine learning framework! It's so intuitive and well-documented.",
+        description="Text content to analyze for sentiment (posts, comments, reviews, etc.)"
+    )
 
 class BatchSentimentAnalysisRequest(BaseModel):
-    texts: List[str]
+    texts: List[str] = Field(
+        ...,
+        example=[
+            "This API is amazing! Works perfectly for my research project.",
+            "The documentation could be better, but overall it's okay.",
+            "Terrible experience, nothing worked as expected."
+        ],
+        description="List of text strings to analyze sentiment for in batch"
+    )
 
 class SentimentAnalysisResponse(BaseModel):
     text: str

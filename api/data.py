@@ -19,20 +19,60 @@ class PostQueryRequest(BaseModel):
     """Request model for querying stored posts"""
     
     # Job filtering
-    job_ids: Optional[List[str]] = Field(default=None, description="Specific collection job IDs")
-    job_status: Optional[JobStatus] = Field(default=None, description="Filter by job status")
-    
+    job_ids: Optional[List[str]] = Field(
+        default=None,
+        example=["job_abc123", "job_def456"],
+        description="Specific collection job IDs to query data from"
+    )
+    job_status: Optional[JobStatus] = Field(
+        default=None,
+        example=JobStatus.COMPLETED,
+        description="Filter by job status (PENDING, RUNNING, COMPLETED, FAILED)"
+    )
+
     # Content filtering
-    subreddits: Optional[List[str]] = Field(default=None, description="Filter by subreddits")
-    keywords: Optional[List[str]] = Field(default=None, description="Search in title and content")
-    exclude_keywords: Optional[List[str]] = Field(default=None, description="Exclude posts with these keywords")
+    subreddits: Optional[List[str]] = Field(
+        default=None,
+        example=["python", "MachineLearning", "datascience"],
+        description="Filter posts from specific subreddits"
+    )
+    keywords: Optional[List[str]] = Field(
+        default=None,
+        example=["machine learning", "tensorflow", "neural networks"],
+        description="Search for posts containing these keywords in title and content"
+    )
+    exclude_keywords: Optional[List[str]] = Field(
+        default=None,
+        example=["spam", "advertisement"],
+        description="Exclude posts containing these keywords"
+    )
     
     # Score and engagement filters
-    min_score: Optional[int] = Field(default=None, description="Minimum post score")
-    max_score: Optional[int] = Field(default=None, description="Maximum post score")
-    min_upvote_ratio: Optional[float] = Field(default=None, description="Minimum upvote ratio")
-    min_comments: Optional[int] = Field(default=None, description="Minimum comment count")
-    max_comments: Optional[int] = Field(default=None, description="Maximum comment count")
+    min_score: Optional[int] = Field(
+        default=None,
+        example=50,
+        description="Minimum post upvote score"
+    )
+    max_score: Optional[int] = Field(
+        default=None,
+        example=1000,
+        description="Maximum post upvote score"
+    )
+    min_upvote_ratio: Optional[float] = Field(
+        default=None,
+        example=0.8,
+        description="Minimum upvote ratio (0.0-1.0)"
+    )
+    min_comments: Optional[int] = Field(
+        default=None,
+        example=10,
+        description="Minimum number of comments on the post"
+    )
+    max_comments: Optional[int] = Field(
+        default=None,
+        example=500,
+        description="Maximum number of comments on the post"
+    )
     
     # Content type filters
     exclude_nsfw: Optional[bool] = Field(default=None, description="Exclude NSFW content")

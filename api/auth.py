@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Form
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 import secrets
@@ -32,14 +32,39 @@ security = HTTPBearer()
 
 # Pydantic models for requests/responses
 class UserRegister(BaseModel):
-    email: EmailStr
-    password: str
-    username: Optional[str] = None
+    email: EmailStr = Field(
+        ...,
+        example="john.doe@example.com",
+        description="Valid email address for account registration"
+    )
+    password: str = Field(
+        ...,
+        min_length=8,
+        example="SecurePassword123!",
+        description="Password must be at least 8 characters long"
+    )
+    username: Optional[str] = Field(
+        None,
+        example="johndoe",
+        description="Optional username (defaults to email prefix if not provided)"
+    )
 
 class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
-    username: Optional[str] = None  # Allow optional username field from frontend
+    email: EmailStr = Field(
+        ...,
+        example="john.doe@example.com",
+        description="Email address used during registration"
+    )
+    password: str = Field(
+        ...,
+        example="SecurePassword123!",
+        description="Account password"
+    )
+    username: Optional[str] = Field(
+        None,
+        example="johndoe",
+        description="Optional username field from frontend"
+    )
 
 class UserResponse(BaseModel):
     id: int
@@ -54,7 +79,11 @@ class Token(BaseModel):
     token_type: str
 
 class APIKeyRequest(BaseModel):
-    name: str
+    name: str = Field(
+        ...,
+        example="My Development API Key",
+        description="Descriptive name for the API key (e.g. 'Production App', 'Testing Environment')"
+    )
 
 class APIKeyResponse(BaseModel):
     id: int
@@ -72,7 +101,11 @@ class APIKeyListResponse(BaseModel):
     last_used_at: Optional[datetime]
 
 class AdminTestUserRequest(BaseModel):
-    admin_key: str
+    admin_key: str = Field(
+        ...,
+        example="your-admin-secret-key",
+        description="Admin secret key required for creating test users"
+    )
 
 # Utility functions
 def hash_password(password: str) -> str:
@@ -731,3 +764,23 @@ async def create_test_user(
         },
         "api_key": raw_key
     }
+
+# Form-based test user endpoint (easier to use in Swagger UI)
+@router.post("/create-test-user/form")
+async def create_test_user_form(
+    admin_key: str = Form(..., description="Admin secret key for creating test users", example="your-admin-secret-key"),
+    db: Session = Depends(get_db)
+) -> dict:
+    """
+    Create/reset test user with form input (easier to use in Swagger UI than JSON)
+
+    This endpoint provides the same functionality as POST /create-test-user but with a
+    simple form field instead of JSON, making it much easier to test in the Swagger UI.
+
+    Returns:
+    - Test user credentials (email: test@trendit.dev, password: TestPassword123)
+    - Fresh API key for immediate testing
+    """
+    # Convert form data to request object
+    request = AdminTestUserRequest(admin_key=admin_key)
+    return await create_test_user(request, db)

@@ -21,23 +21,67 @@ logger = logging.getLogger(__name__)
 # Request/Response Models
 class ExportRequest(BaseModel):
     """Request model for data export"""
-    
+
     # Export target
-    export_type: str = Field(..., description="What to export (posts, comments, job_data)")
-    format: str = Field(..., description="Export format (csv, json, jsonl, parquet)")
-    
+    export_type: str = Field(
+        ...,
+        example="posts",
+        description="What to export (posts, comments, job_data)"
+    )
+    format: str = Field(
+        ...,
+        example="csv",
+        description="Export format (csv, json, jsonl, parquet)"
+    )
+
     # Optional query filters (reuse Data API filters)
-    job_ids: Optional[List[str]] = Field(default=None, description="Specific collection job IDs")
-    subreddits: Optional[List[str]] = Field(default=None, description="Filter by subreddits")
-    keywords: Optional[List[str]] = Field(default=None, description="Search keywords")
-    min_score: Optional[int] = Field(default=None, description="Minimum score")
-    created_after: Optional[datetime] = Field(default=None, description="Created after date")
-    created_before: Optional[datetime] = Field(default=None, description="Created before date")
-    
+    job_ids: Optional[List[str]] = Field(
+        default=None,
+        example=["job_abc123", "job_def456"],
+        description="Specific collection job IDs to export data from"
+    )
+    subreddits: Optional[List[str]] = Field(
+        default=None,
+        example=["python", "MachineLearning"],
+        description="Filter exported data by specific subreddits"
+    )
+    keywords: Optional[List[str]] = Field(
+        default=None,
+        example=["machine learning", "AI", "tensorflow"],
+        description="Search keywords to filter exported posts/comments"
+    )
+    min_score: Optional[int] = Field(
+        default=None,
+        example=50,
+        description="Minimum upvote score for exported posts"
+    )
+    created_after: Optional[datetime] = Field(
+        default=None,
+        example="2024-01-01T00:00:00Z",
+        description="Export only data created after this date"
+    )
+    created_before: Optional[datetime] = Field(
+        default=None,
+        example="2024-12-31T23:59:59Z",
+        description="Export only data created before this date"
+    )
+
     # Export options
-    include_metadata: bool = Field(default=True, description="Include collection metadata")
-    anonymize_authors: bool = Field(default=False, description="Remove author information")
-    limit: Optional[int] = Field(default=None, description="Limit number of records")
+    include_metadata: bool = Field(
+        default=True,
+        example=True,
+        description="Include collection job metadata in export"
+    )
+    anonymize_authors: bool = Field(
+        default=False,
+        example=False,
+        description="Remove author usernames from exported data for privacy"
+    )
+    limit: Optional[int] = Field(
+        default=None,
+        example=1000,
+        description="Maximum number of records to export (null = no limit)"
+    )
 
 class ExportResponse(BaseModel):
     """Response model for export operations"""
