@@ -18,7 +18,7 @@ import json
 import os
 import logging
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from models.models import (
@@ -566,7 +566,7 @@ class PaddleService:
             return subscription.current_period_start, subscription.current_period_end
         else:
             # Fallback to calendar month for free users
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             
             # Get next month

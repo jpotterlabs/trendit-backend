@@ -493,49 +493,49 @@ async def get_subscription_tiers():
     return {
         "tiers": {
             "free": {
-                "name": "Free",
+                "name": "Discover",
                 "price": 0,
                 "currency": "USD",
                 "interval": "month",
                 "features": [
-                    "100 API calls per month",
-                    "5 data exports per month",
-                    "50 sentiment analyses per month", 
-                    "30-day data retention",
+                    "Scenarios API access",
+                    "100 queries per month",
+                    "Pre-built trend scenarios",
                     "Community support"
                 ],
-                "limits": paddle_service.tier_config[SubscriptionTier.FREE]["limits"]
+                "description": "Explore Reddit trends with pre-built scenarios",
+                "features_config": paddle_service.tier_config[SubscriptionTier.FREE]["features"]
             },
             "pro": {
-                "name": "Pro",
+                "name": "Research",
                 "price": 29,
-                "currency": "USD", 
+                "currency": "USD",
                 "interval": "month",
                 "features": [
-                    "10,000 API calls per month",
-                    "100 data exports per month",
-                    "2,000 sentiment analyses per month",
-                    "1-year data retention",
-                    "Priority email support",
-                    "Advanced analytics"
+                    "All FREE features",
+                    "Query API for live searches",
+                    "Basic analytics dashboard",
+                    "Ephemeral data access",
+                    "Email support"
                 ],
-                "limits": paddle_service.tier_config[SubscriptionTier.PRO]["limits"]
+                "description": "Ad-hoc research with live Reddit searches",
+                "features_config": paddle_service.tier_config[SubscriptionTier.PRO]["features"]
             },
-            "enterprise": {
-                "name": "Enterprise",
-                "price": 299,
+            "premium": {
+                "name": "Intelligence",
+                "price": 79,
                 "currency": "USD",
-                "interval": "month", 
+                "interval": "month",
                 "features": [
-                    "100,000 API calls per month",
-                    "1,000 data exports per month",
-                    "20,000 sentiment analyses per month",
-                    "Unlimited data retention",
-                    "Phone & chat support",
-                    "Custom integrations",
-                    "Dedicated account manager"
+                    "All PRO features",
+                    "Collect API for data gathering",
+                    "Data API for persistent access",
+                    "Export API for data downloads",
+                    "Advanced analytics platform",
+                    "Priority support"
                 ],
-                "limits": paddle_service.tier_config[SubscriptionTier.PREMIUM]["limits"]
+                "description": "Complete data intelligence platform",
+                "features_config": paddle_service.tier_config[SubscriptionTier.PREMIUM]["features"]
             }
         }
     }
