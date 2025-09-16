@@ -10,7 +10,7 @@ from models.database import get_db
 from models.models import CollectionJob, JobStatus, SortType, TimeFilter, RedditPost, RedditComment, User
 from services.data_collector import DataCollector
 from services.sentiment_analyzer import sentiment_analyzer
-from api.auth import require_api_call_limit, require_jobs_api_limit
+from api.auth import require_api_call_limit, require_jobs_api_limit, require_feature
 from services.date_filter_fix import ImprovedDateFiltering
 
 router = APIRouter(prefix="/api/collect", tags=["collection"])
@@ -145,6 +145,7 @@ class CollectionJobListResponse(BaseModel):
 # Collection Job Management Endpoints
 
 @router.post("/jobs", response_model=CollectionJobResponse)
+@require_feature('collect_api')
 async def create_collection_job(
     job_request: CollectionJobRequest,
     background_tasks: BackgroundTasks,
@@ -201,6 +202,7 @@ async def create_collection_job(
         raise HTTPException(status_code=500, detail=f"Failed to create collection job: {str(e)}")
 
 @router.get("/jobs/{job_id}", response_model=CollectionJobResponse)
+@require_feature('collect_api')
 async def get_collection_job(
     job_id: str,
     db: Session = Depends(get_db),
@@ -217,6 +219,7 @@ async def get_collection_job(
     return CollectionJobResponse.from_orm(job)
 
 @router.get("/jobs/{job_id}/status", response_model=CollectionJobStatusResponse)
+@require_feature('collect_api')
 async def get_collection_job_status(
     job_id: str,
     db: Session = Depends(get_db),
@@ -240,6 +243,7 @@ async def get_collection_job_status(
     )
 
 @router.get("/jobs", response_model=CollectionJobListResponse)
+@require_feature('collect_api')
 async def list_collection_jobs(
     status: Optional[JobStatus] = None,
     page: int = 1,
@@ -270,6 +274,7 @@ async def list_collection_jobs(
     )
 
 @router.post("/jobs/{job_id}/cancel")
+@require_feature('collect_api')
 async def cancel_collection_job(
     job_id: str,
     db: Session = Depends(get_db),
@@ -298,6 +303,7 @@ async def cancel_collection_job(
     return {"message": f"Collection job {job_id} cancelled successfully"}
 
 @router.delete("/jobs/{job_id}")
+@require_feature('collect_api')
 async def delete_collection_job(
     job_id: str,
     db: Session = Depends(get_db),

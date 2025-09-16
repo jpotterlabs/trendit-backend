@@ -117,7 +117,7 @@ async def create_checkout_session(
                 current_tier != SubscriptionTier.FREE):
                 
                 # Check if trying to downgrade
-                tier_order = {SubscriptionTier.FREE: 0, SubscriptionTier.PRO: 1, SubscriptionTier.ENTERPRISE: 2}
+                tier_order = {SubscriptionTier.FREE: 0, SubscriptionTier.PRO: 1, SubscriptionTier.PREMIUM: 2}
                 if tier_order[request.tier] <= tier_order[current_tier]:
                     return {
                         "error": "subscription_conflict",
@@ -535,7 +535,7 @@ async def get_subscription_tiers():
                     "Custom integrations",
                     "Dedicated account manager"
                 ],
-                "limits": paddle_service.tier_config[SubscriptionTier.ENTERPRISE]["limits"]
+                "limits": paddle_service.tier_config[SubscriptionTier.PREMIUM]["limits"]
             }
         }
     }

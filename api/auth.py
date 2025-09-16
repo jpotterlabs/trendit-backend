@@ -10,6 +10,7 @@ import jwt
 import os
 from typing import Optional
 from sqlalchemy import func, and_
+from functools import wraps
 
 from models.database import get_db
 from models.models import User, APIKey, SubscriptionStatus, PaddleSubscription, SubscriptionTier, UsageRecord
@@ -784,3 +785,74 @@ async def create_test_user_form(
     # Convert form data to request object
     request = AdminTestUserRequest(admin_key=admin_key)
     return await create_test_user(request, db)
+
+
+# ========================================================================
+# FEATURE-BASED ACCESS CONTROL
+# ========================================================================
+
+def require_feature(feature_name: str):
+    """
+    Decorator to enforce feature-based access control based on subscription tier.
+
+    Args:
+        feature_name: Name of the feature (e.g., 'query_api', 'collect_api', 'export_api')
+
+    Usage:
+        @require_feature('query_api')
+        async def some_endpoint(user: User = Depends(get_current_user)):
+            # Endpoint logic here
+    """
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Extract user from the function arguments
+            user = None
+            for arg in args:
+                if isinstance(arg, User):
+                    user = arg
+                    break
+
+            # Check kwargs for user
+            if not user and 'user' in kwargs:
+                user = kwargs['user']
+
+            if not user:
+                # Try to get current user from dependencies
+                for key, value in kwargs.items():
+                    if isinstance(value, User):
+                        user = value
+                        break
+
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required"
+                )
+
+            # Get user's subscription tier
+            from services.paddle_service import paddle_service
+
+            # Default to FREE tier for users without subscription
+            tier = SubscriptionTier.FREE
+            if hasattr(user, 'paddle_subscription') and user.paddle_subscription:
+                tier = user.paddle_subscription.tier
+
+            # Check if tier has access to the feature
+            if not paddle_service.has_feature_access(tier, feature_name):
+                tier_info = paddle_service.get_tier_info(tier)
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Feature '{feature_name}' requires {tier.value.upper()} tier or higher. Current tier: {tier_info['name']}. Upgrade at /billing to access this feature.",
+                    headers={
+                        "X-Feature-Required": feature_name,
+                        "X-Current-Tier": tier.value,
+                        "X-Upgrade-Required": "true"
+                    }
+                )
+
+            # Feature access granted, proceed with the endpoint
+            return await func(*args, **kwargs)
+
+        return wrapper
+    return decorator

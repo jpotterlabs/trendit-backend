@@ -9,7 +9,7 @@ import logging
 from models.database import get_db
 from models.models import CollectionJob, RedditPost, RedditComment, RedditUser, Analytics, JobStatus, User
 from services.analytics import AnalyticsService
-from api.auth import require_api_call_limit, require_dashboard_api_limit
+from api.auth import require_api_call_limit, require_dashboard_api_limit, require_feature
 
 router = APIRouter(prefix="/api/data", tags=["data"])
 logger = logging.getLogger(__name__)
