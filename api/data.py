@@ -9,7 +9,7 @@ import logging
 from models.database import get_db
 from models.models import CollectionJob, RedditPost, RedditComment, RedditUser, Analytics, JobStatus, User
 from services.analytics import AnalyticsService
-from api.auth import require_api_call_limit, require_dashboard_api_limit
+from api.auth import require_api_call_limit, require_dashboard_api_limit, require_feature
 
 router = APIRouter(prefix="/api/data", tags=["data"])
 logger = logging.getLogger(__name__)
@@ -157,6 +157,7 @@ class PostAnalyticsResponse(BaseModel):
 # Data Query Endpoints
 
 @router.post("/posts", response_model=DataQueryResponse)
+@require_feature('data_api')
 async def query_posts(
     query: PostQueryRequest,
     db: Session = Depends(get_db),
@@ -308,6 +309,7 @@ async def query_posts(
         raise HTTPException(status_code=500, detail=f"Post query failed: {str(e)}")
 
 @router.post("/comments", response_model=DataQueryResponse)
+@require_feature('data_api')
 async def query_comments(
     query: CommentQueryRequest,
     db: Session = Depends(get_db),
@@ -435,6 +437,7 @@ async def query_comments(
         raise HTTPException(status_code=500, detail=f"Comment query failed: {str(e)}")
 
 @router.get("/analytics/{job_id}", response_model=PostAnalyticsResponse)
+@require_feature('data_api')
 async def get_job_analytics(
     job_id: str,
     db: Session = Depends(get_db),
@@ -548,6 +551,7 @@ async def get_job_analytics(
         raise HTTPException(status_code=500, detail=f"Analytics query failed: {str(e)}")
 
 @router.get("/summary", response_model=Dict[str, Any])
+@require_feature('data_api')
 async def get_data_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_dashboard_api_limit)
@@ -606,6 +610,7 @@ async def get_data_summary(
 
 # Simple GET endpoints for basic queries
 @router.get("/posts/recent")
+@require_feature('data_api')
 async def get_recent_posts(
     limit: int = Query(20, ge=1, le=100),
     subreddit: Optional[str] = Query(None),
@@ -640,6 +645,7 @@ async def get_recent_posts(
     }
 
 @router.get("/posts/top")
+@require_feature('data_api')
 async def get_top_posts(
     limit: int = Query(20, ge=1, le=100),
     subreddit: Optional[str] = Query(None),

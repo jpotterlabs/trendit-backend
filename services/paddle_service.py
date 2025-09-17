@@ -18,7 +18,7 @@ import json
 import os
 import logging
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from models.models import (
@@ -54,36 +54,67 @@ class PaddleService:
             "Accept": "application/json"
         }
         
-        # Trendit subscription tier configuration (increased limits to prevent dashboard issues)
+        # Trendit subscription tier configuration - Feature-based access model
         self.tier_config = {
             SubscriptionTier.FREE: {
                 "price": 0,
                 "paddle_price_id": None,
+                "name": "Discover",
+                "description": "Explore Reddit trends with pre-built scenarios",
+                "features": {
+                    "scenarios_api": True,
+                    "query_api": False,
+                    "collect_api": False,
+                    "data_api": False,
+                    "export_api": False,
+                    "analytics_dashboard": False,
+                    "sentiment_analysis": False
+                },
                 "limits": {
-                    "api_calls_per_month": 500,  # Increased from 100 to allow dashboard usage
-                    "exports_per_month": 10,     # Increased from 5
-                    "sentiment_analysis_per_month": 100,  # Increased from 50
+                    "scenario_queries_per_month": 100,
                     "data_retention_days": 30
                 }
             },
             SubscriptionTier.PRO: {
                 "price": 29,
                 "paddle_price_id": os.getenv("PADDLE_PRO_PRICE_ID"),
+                "name": "Research",
+                "description": "Ad-hoc research with live Reddit searches",
+                "features": {
+                    "scenarios_api": True,
+                    "query_api": True,
+                    "collect_api": False,
+                    "data_api": False,
+                    "export_api": False,
+                    "analytics_dashboard": True,  # Basic analytics only
+                    "sentiment_analysis": False
+                },
                 "limits": {
-                    "api_calls_per_month": 10000,
-                    "exports_per_month": 100,
-                    "sentiment_analysis_per_month": 2000,
-                    "data_retention_days": 365
+                    "scenario_queries_per_month": -1,  # Unlimited
+                    "query_requests_per_month": 1000,
+                    "data_retention_days": 90
                 }
             },
-            SubscriptionTier.ENTERPRISE: {
-                "price": 299,
-                "paddle_price_id": os.getenv("PADDLE_ENTERPRISE_PRICE_ID"),
+            SubscriptionTier.PREMIUM: {
+                "price": 79,
+                "paddle_price_id": os.getenv("PADDLE_PREMIUM_PRICE_ID"),
+                "name": "Intelligence",
+                "description": "Persistent data collection with powerful analytics",
+                "features": {
+                    "scenarios_api": True,
+                    "query_api": True,
+                    "collect_api": True,
+                    "data_api": True,
+                    "export_api": True,
+                    "analytics_dashboard": True,  # Advanced analytics
+                    "sentiment_analysis": False  # Removed entirely
+                },
                 "limits": {
-                    "api_calls_per_month": 100000,
-                    "exports_per_month": 1000,
-                    "sentiment_analysis_per_month": 20000,
-                    "data_retention_days": -1  # Unlimited
+                    "scenario_queries_per_month": -1,  # Unlimited
+                    "query_requests_per_month": -1,    # Unlimited
+                    "collection_jobs_per_month": 100,
+                    "data_exports_per_month": 50,
+                    "data_retention_days": 365
                 }
             }
         }
@@ -172,7 +203,7 @@ class PaddleService:
         
         Args:
             customer_id: Paddle customer ID
-            tier: Subscription tier (PRO or ENTERPRISE)
+            tier: Subscription tier (PRO or PREMIUM)
             trial_days: Optional trial period in days
             
         Returns:
@@ -478,14 +509,49 @@ class PaddleService:
     
     def get_tier_limits(self, tier: SubscriptionTier) -> Dict[str, int]:
         """Get usage limits for subscription tier
-        
+
         Args:
             tier: Subscription tier
-            
+
         Returns:
             Dictionary of usage limits
         """
         return self.tier_config[tier]["limits"]
+
+    def get_tier_features(self, tier: SubscriptionTier) -> Dict[str, bool]:
+        """Get feature access for subscription tier
+
+        Args:
+            tier: Subscription tier
+
+        Returns:
+            Dictionary of feature access permissions
+        """
+        return self.tier_config[tier]["features"]
+
+    def has_feature_access(self, tier: SubscriptionTier, feature: str) -> bool:
+        """Check if tier has access to specific feature
+
+        Args:
+            tier: Subscription tier
+            feature: Feature name (e.g., 'query_api', 'collect_api')
+
+        Returns:
+            True if tier has access to feature
+        """
+        features = self.get_tier_features(tier)
+        return features.get(feature, False)
+
+    def get_tier_info(self, tier: SubscriptionTier) -> Dict:
+        """Get complete tier information including name, description, features, and limits
+
+        Args:
+            tier: Subscription tier
+
+        Returns:
+            Complete tier configuration dictionary
+        """
+        return self.tier_config[tier]
     
     def calculate_billing_period(self, subscription: PaddleSubscription) -> Tuple[datetime, datetime]:
         """Calculate current billing period for subscription
@@ -500,7 +566,7 @@ class PaddleService:
             return subscription.current_period_start, subscription.current_period_end
         else:
             # Fallback to calendar month for free users
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             
             # Get next month
@@ -540,9 +606,9 @@ class PaddleService:
         
         # Check that price IDs are configured for paid tiers
         pro_price_id = self.tier_config[SubscriptionTier.PRO]["paddle_price_id"]
-        enterprise_price_id = self.tier_config[SubscriptionTier.ENTERPRISE]["paddle_price_id"]
+        premium_price_id = self.tier_config[SubscriptionTier.PREMIUM]["paddle_price_id"]
         
-        return bool(pro_price_id and enterprise_price_id)
+        return bool(pro_price_id and premium_price_id)
 
 
 # Global instance for dependency injection

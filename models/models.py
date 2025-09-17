@@ -36,7 +36,7 @@ class SubscriptionStatus(enum.Enum):
 class SubscriptionTier(enum.Enum):
     FREE = "free"
     PRO = "pro"
-    ENTERPRISE = "enterprise"
+    PREMIUM = "premium"
 
 class User(Base):
     __tablename__ = "users"

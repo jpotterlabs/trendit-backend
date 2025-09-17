@@ -13,7 +13,7 @@ import uuid
 from models.database import get_db
 from models.models import CollectionJob, RedditPost, RedditComment, JobStatus, User
 from api.data import PostQueryRequest, CommentQueryRequest
-from api.auth import require_export_limit
+from api.auth import require_export_limit, require_feature
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 logger = logging.getLogger(__name__)

@@ -8,7 +8,7 @@ import logging
 from services.data_collector import DataCollector
 from services.date_filter_fix import ImprovedDateFiltering
 from models.models import User
-from api.auth import require_api_call_limit
+from api.auth import require_api_call_limit, require_feature
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/query", tags=["query"])
@@ -273,6 +273,7 @@ class QueryResponse(BaseModel):
 
 # POST Endpoints for complex queries
 @router.post("/posts", response_model=QueryResponse)
+@require_feature('query_api')
 async def query_posts(
     request: PostQueryRequest,
     current_user: User = Depends(require_api_call_limit)
@@ -426,6 +427,7 @@ async def query_posts(
 
 # Form-based POST endpoint (easier to use in Swagger UI)
 @router.post("/posts/form", response_model=QueryResponse)
+@require_feature('query_api')
 async def query_posts_form(
     subreddits: str = Form(..., description="Comma-separated subreddit names (e.g. python,MachineLearning)", example="python,MachineLearning,datascience"),
     keywords: Optional[str] = Form(None, description="Comma-separated keywords (e.g. AI,neural networks)", example="machine learning,AI,tensorflow"),
@@ -469,6 +471,7 @@ async def query_posts_form(
     return await query_posts(request, current_user)
 
 @router.post("/comments", response_model=QueryResponse)
+@require_feature('query_api')
 async def query_comments(
     request: CommentQueryRequest,
     current_user: User = Depends(require_api_call_limit)
@@ -577,6 +580,7 @@ async def query_comments(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/users", response_model=QueryResponse)
+@require_feature('query_api')
 async def query_users(
     request: UserQueryRequest,
     current_user: User = Depends(require_api_call_limit)
@@ -677,6 +681,7 @@ async def query_users(
 
 # GET endpoints for simple queries
 @router.get("/posts/simple", response_model=QueryResponse)
+@require_feature('query_api')
 async def simple_post_query(
     subreddits: str = FastAPIQuery(..., description="Comma-separated subreddit names"),
     keywords: Optional[str] = FastAPIQuery(None, description="Comma-separated keywords"),
@@ -694,6 +699,7 @@ async def simple_post_query(
     return await query_posts(request)
 
 @router.get("/examples")
+@require_feature('query_api')
 async def query_examples(
     current_user: User = Depends(require_api_call_limit)
 ):
